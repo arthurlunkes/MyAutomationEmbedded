@@ -15,6 +15,7 @@ Preferences prefs;
 WebServer server(80);
 
 const int ledPin = 2;
+const int lightSensorPin = 39;
 const int buzzerPin = 18;
 const int buzzerChannel = 0;
 const int thermistorPin = 36; // Pino ADC para o termistor
@@ -199,6 +200,18 @@ float readTemperature() {
     return tempK - 273.15;
 }
 
+int readLuminosityPercent() {
+    int raw = analogRead(lightSensorPin);
+
+    return map(
+        raw,
+        0,
+        4095,
+        100,
+        0
+    );
+}
+
 void handleTemperature() {
     JsonDocument doc;
 
@@ -206,6 +219,26 @@ void handleTemperature() {
     doc["unit"] = "C";
 
     String response;
+    serializeJson(doc, response);
+
+    server.send(
+        200,
+        "application/json",
+        response
+    );
+}
+
+void handleLuminosity() {
+
+    JsonDocument doc;
+
+    int value = readLuminosityPercent();
+
+    doc["luminosity"] = value;
+    doc["unit"] = "%";
+
+    String response;
+
     serializeJson(doc, response);
 
     server.send(
@@ -232,8 +265,9 @@ void handleHumidity() {
 
     JsonDocument doc;
 
-    doc["temperature"] = data.temperature;
+    // doc["temperature"] = data.temperature;
     doc["humidity"] = data.humidity;
+    doc["unit"] = "%";
 
     String response;
 
@@ -256,6 +290,7 @@ void setupServer() {
     server.on("/wifi", HTTP_POST, handleWifiConfig);
     server.on("/temperature", HTTP_GET, handleTemperature);
     server.on("/humidity", HTTP_GET, handleHumidity);
+    server.on("/luminosity", HTTP_GET, handleLuminosity);
     server.on("/info", HTTP_GET, handleInfo);
     server.on("/reset", HTTP_GET, handleReset);
     server.on("/H", HTTP_GET, handleAlarmOn);
