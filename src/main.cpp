@@ -4,6 +4,7 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
+#include <math.h>
 
 Preferences prefs;
 WebServer server(80);
@@ -11,6 +12,7 @@ WebServer server(80);
 const int ledPin = 2;
 const int buzzerPin = 18;
 const int buzzerChannel = 0;
+const int thermistorPin = 36; // Pino ADC para o termistor
 const int buttonPin = 0; // Botão BOOT (Flash) do ESP32
 
 const int imperialMarchNotes[] = {
@@ -170,6 +172,44 @@ void handleAlarmOff() {
     server.send(200, "application/json", "{\"success\":true}");
 }
 
+float readTemperature() {
+    int adcValue = analogRead(thermistorPin);
+
+    if (adcValue <= 0 || adcValue >= 4095) {
+        return -999;
+    }
+
+    double voltage = ((double)adcValue / 4095.0) * 3.3;
+
+    double Rt = 10.0 * voltage / (3.3 - voltage);
+
+    double tempK =
+        1.0 /
+        (
+            (1.0 / (273.15 + 25.0))
+            +
+            (log(Rt / 10.0) / 3950.0)
+        );
+
+    return tempK - 273.15;
+}
+
+void handleTemperature() {
+    JsonDocument doc;
+
+    doc["temperature"] = readTemperature();
+    doc["unit"] = "C";
+
+    String response;
+    serializeJson(doc, response);
+
+    server.send(
+        200,
+        "application/json",
+        response
+    );
+}
+
 void handleReset() {
     prefs.begin("wifi", false);
     prefs.clear(); // Limpa todas as chaves
@@ -181,13 +221,13 @@ void handleReset() {
 }
 
 // --- SETUP E LOOP ---
-
 void setupServer() {
     server.on("/", HTTP_GET, handleRoot);
     server.on("/status", HTTP_GET, handleStatus);
     server.on("/wifi", HTTP_POST, handleWifiConfig);
+    server.on("/temperature", HTTP_GET, handleTemperature);
     server.on("/info", HTTP_GET, handleInfo);
-    server.on("/reset", HTTP_ANY, handleReset);
+    server.on("/reset", HTTP_GET, handleReset);
     server.on("/H", HTTP_GET, handleAlarmOn);
     server.on("/L", HTTP_GET, handleAlarmOff);
     server.begin();
