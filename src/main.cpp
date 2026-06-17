@@ -5,6 +5,11 @@
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
 #include <math.h>
+#include <DHTesp.h>
+
+const int dhtPin = 13;
+
+DHTesp dht;
 
 Preferences prefs;
 WebServer server(80);
@@ -220,12 +225,37 @@ void handleReset() {
     ESP.restart(); // Reinicia o ESP32
 }
 
+void handleHumidity() {
+
+    TempAndHumidity data =
+        dht.getTempAndHumidity();
+
+    JsonDocument doc;
+
+    doc["temperature"] = data.temperature;
+    doc["humidity"] = data.humidity;
+
+    String response;
+
+    serializeJson(
+        doc,
+        response
+    );
+
+    server.send(
+        200,
+        "application/json",
+        response
+    );
+}
+
 // --- SETUP E LOOP ---
 void setupServer() {
     server.on("/", HTTP_GET, handleRoot);
     server.on("/status", HTTP_GET, handleStatus);
     server.on("/wifi", HTTP_POST, handleWifiConfig);
     server.on("/temperature", HTTP_GET, handleTemperature);
+    server.on("/humidity", HTTP_GET, handleHumidity);
     server.on("/info", HTTP_GET, handleInfo);
     server.on("/reset", HTTP_GET, handleReset);
     server.on("/H", HTTP_GET, handleAlarmOn);
@@ -293,6 +323,11 @@ void setup() {
     digitalWrite(ledPin, LOW);
 
     pinMode(buttonPin, INPUT_PULLUP);
+
+    dht.setup(
+        dhtPin,
+        DHTesp::DHT11
+    );
 
     ledcSetup(buzzerChannel, 2000, 8);
     ledcAttachPin(buzzerPin, buzzerChannel);
