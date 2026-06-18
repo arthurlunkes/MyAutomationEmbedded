@@ -1,0 +1,4 @@
+name: DEV
+variables:
+  - name: URL-BASE
+    value: http://192.168.1.33

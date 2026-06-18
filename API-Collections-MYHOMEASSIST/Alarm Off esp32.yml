@@ -1,0 +1,37 @@
+info:
+  name: Alarm Off esp32
+  type: http
+  seq: 9
+
+http:
+  method: GET
+  url: "{{URL-BASE}}/L"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example success
+    request:
+      url: "{{URL-BASE}}/L"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-type
+          value: application/json
+        - name: content-length
+          value: "16"
+        - name: connection
+          value: close
+      body:
+        type: json
+        data: |-
+          {
+            "success": true
+          }

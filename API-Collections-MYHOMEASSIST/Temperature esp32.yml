@@ -1,0 +1,38 @@
+info:
+  name: Temperature esp32
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{URL-BASE}}/temperature"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example success
+    request:
+      url: "{{URL-BASE}}/temperature"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-type
+          value: application/json
+        - name: content-length
+          value: "35"
+        - name: connection
+          value: close
+      body:
+        type: json
+        data: |-
+          {
+            "temperature": 23.63197,
+            "unit": "C"
+          }

@@ -1,0 +1,38 @@
+info:
+  name: Luminosity esp32
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{URL-BASE}}/luminosity"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example success
+    request:
+      url: "{{URL-BASE}}/luminosity"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-type
+          value: application/json
+        - name: content-length
+          value: "28"
+        - name: connection
+          value: close
+      body:
+        type: json
+        data: |-
+          {
+            "luminosity": 14,
+            "unit": "%"
+          }
