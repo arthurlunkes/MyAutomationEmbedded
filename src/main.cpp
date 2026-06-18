@@ -36,7 +36,7 @@ const int imperialMarchDurations[] = {
 };
 
 const int imperialMarchLength = sizeof(imperialMarchNotes) / sizeof(imperialMarchNotes[0]);
-const int notePauseMs = 50;
+const int notePauseMs = 100;
 
 bool alarmEnabled = false;
 bool noteIsPlaying = false;
@@ -97,13 +97,17 @@ void updateAlarm() {
 
 // --- ROTAS DO WEBSERVER ---
 
+void sendSuccess() {
+    server.send(200, "application/json", "{\"success\":true}");
+}
+
 void handleRoot() {
-    String html = "<html><body>";
-    html += "<h1>Controle do ESP32</h1>";
-    html += "<p><a href='/H'><button style='height:50px;width:100px;background:green;color:white;border:none;border-radius:5px;'>LIGAR</button></a></p>";
-    html += "<p><a href='/L'><button style='height:50px;width:100px;background:red;color:white;border:none;border-radius:5px;'>DESLIGAR</button></a></p>";
-    html += "<p><a href='/reset'><button style='height:50px;width:150px;background:gray;color:white;border:none;border-radius:5px;margin-top:20px'>RESETAR WIFI</button></a></p>";
-    html += "</body></html>";
+    String html = "<html><body>"
+                  "<h1>Controle do ESP32</h1>"
+                  "<p><a href='/H'><button style='height:50px;width:100px;background:green;color:white;border:none;border-radius:5px;'>LIGAR</button></a></p>"
+                  "<p><a href='/L'><button style='height:50px;width:100px;background:red;color:white;border:none;border-radius:5px;'>DESLIGAR</button></a></p>"
+                  "<p><a href='/reset'><button style='height:50px;width:150px;background:gray;color:white;border:none;border-radius:5px;margin-top:20px'>RESETAR WIFI</button></a></p>"
+                  "</body></html>";
     server.send(200, "text/html", html);
 }
 
@@ -148,7 +152,7 @@ void handleWifiConfig() {
     prefs.putString("password", password);
     prefs.end();
 
-    server.send(200, "application/json", "{\"success\":true}");
+    sendSuccess();
     
     delay(1000);
     ESP.restart();
@@ -169,13 +173,13 @@ void handleInfo() {
 void handleAlarmOn() {
     digitalWrite(ledPin, HIGH);
     turnAlarmOn();
-    server.send(200, "application/json", "{\"success\":true}");
+    sendSuccess();
 }
 
 void handleAlarmOff() {
     digitalWrite(ledPin, LOW);
     turnAlarmOff();
-    server.send(200, "application/json", "{\"success\":true}");
+    sendSuccess();
 }
 
 float readTemperature() {
@@ -201,51 +205,24 @@ float readTemperature() {
 }
 
 int readLuminosityPercent() {
-    int raw = analogRead(lightSensorPin);
+    return map(analogRead(lightSensorPin), 0, 4095, 100, 0);
+}
 
-    return map(
-        raw,
-        0,
-        4095,
-        100,
-        0
-    );
+void sendSensorData(const char* key, float value, const char* unit) {
+    JsonDocument doc;
+    doc[key] = value;
+    doc["unit"] = unit;
+    String response;
+    serializeJson(doc, response);
+    server.send(200, "application/json", response);
 }
 
 void handleTemperature() {
-    JsonDocument doc;
-
-    doc["temperature"] = readTemperature();
-    doc["unit"] = "C";
-
-    String response;
-    serializeJson(doc, response);
-
-    server.send(
-        200,
-        "application/json",
-        response
-    );
+    sendSensorData("temperature", readTemperature(), "C");
 }
 
 void handleLuminosity() {
-
-    JsonDocument doc;
-
-    int value = readLuminosityPercent();
-
-    doc["luminosity"] = value;
-    doc["unit"] = "%";
-
-    String response;
-
-    serializeJson(doc, response);
-
-    server.send(
-        200,
-        "application/json",
-        response
-    );
+    sendSensorData("luminosity", readLuminosityPercent(), "%");
 }
 
 void handleReset() {
@@ -253,34 +230,13 @@ void handleReset() {
     prefs.clear(); // Limpa todas as chaves
     prefs.end();
 
-    server.send(200, "application/json", "{\"success\":true}");
+    sendSuccess();
     delay(1000);
     ESP.restart(); // Reinicia o ESP32
 }
 
 void handleHumidity() {
-
-    TempAndHumidity data =
-        dht.getTempAndHumidity();
-
-    JsonDocument doc;
-
-    // doc["temperature"] = data.temperature;
-    doc["humidity"] = data.humidity;
-    doc["unit"] = "%";
-
-    String response;
-
-    serializeJson(
-        doc,
-        response
-    );
-
-    server.send(
-        200,
-        "application/json",
-        response
-    );
+    sendSensorData("humidity", dht.getTempAndHumidity().humidity, "%");
 }
 
 // --- SETUP E LOOP ---
